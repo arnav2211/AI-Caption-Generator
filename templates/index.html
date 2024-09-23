@@ -1,19 +1,216 @@
-<head>
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" / >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Image Captioning</title>
+    
+    <!-- Include Google Font: Lora -->
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;700&display=swap" rel="stylesheet" />
 
-<body>
-    <div class="App">
-        <header class="App-header">
-            <img src="{{ url_for('static', filename='Octocat.png') }}" class="App-logo" alt="logo" />
-            <p>
-                GitHub Codespaces <span class="heart">♥️</span> Flask
-            </p>
-            <p class="small">
-                Edit <code>templates/index.html</code> and refresh to see your changes!
-            </p>
-        </header>
+    <style>
+      body {
+        font-family: 'Lora', serif; /* Use Lora font */
+        background: linear-gradient(135deg, #6dd5ed, #2193b0);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh; /* Ensure full view height */
+        margin: 0;
+        padding: 0;
+        flex-direction: column;
+        overflow-x: hidden;
+      }
+
+      /* Separate heading outside the container */
+      .main-heading {
+        color: #ffffff;
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+        letter-spacing: 1.5px;
+        text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+        background-color: rgba(0, 0, 0, 0.4); /* Darker background */
+        padding: 10px;
+        border-radius: 15px;
+        z-index: 100; /* Ensure it stays above the container */
+        position: relative;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 500px;
+        text-align: center;
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.1);
+        position: relative;
+        z-index: 1;
+      }
+
+      .file-label {
+        background-color: #6dd5ed;
+        color: white;
+        padding: 10px 20px;
+        font-size: 1rem;
+        border-radius: 30px;
+        cursor: pointer;
+        display: inline-block;
+        margin-bottom: 20px;
+        transition: background-color 0.3s ease;
+      }
+
+      .file-label:hover {
+        background-color: #2193b0;
+      }
+
+      input[type="file"] {
+        opacity: 0;
+        position: absolute;
+        z-index: -1;
+      }
+
+      button[type="submit"] {
+        background-color: #4CAF50;
+        color: white;
+        font-size: 1.2rem;
+        padding: 12px 35px;
+        border: none;
+        border-radius: 30px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.3s ease;
+        margin-top: 20px;
+      }
+
+      button[type="submit"]:hover {
+        background-color: #3e8e41;
+        transform: translateY(-5px);
+      }
+
+      img {
+        width: 100%;
+        height: auto;
+        margin-top: 20px;
+        display: none;
+        border-radius: 15px;
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      #caption {
+        font-size: 1.5rem;
+        color: #333;
+        margin-top: 20px;
+        padding: 20px;
+        background-color: #ffffff;
+        border-radius: 15px;
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
+        display: none;
+      }
+
+      .loader {
+        border: 8px solid #f3f7fa;
+        border-radius: 50%;
+        border-top: 8px solid #3498db;
+        width: 60px;
+        height: 60px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+        display: none;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      footer {
+        margin-top: 20px;
+        color: white;
+        font-size: 0.9rem;
+        text-shadow: 1px 1px 8px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Heading moved outside the box -->
+    <h1 class="main-heading">AI Image Captioning</h1>
+
+    <div class="container">
+      <form id="caption-form" action="/generate_caption" method="post" enctype="multipart/form-data">
+        <label for="file-upload" class="file-label">Choose an Image</label>
+        <input type="file" name="image" id="file-upload" accept="image/*" />
+        <br />
+        <img id="image-preview" src="#" alt="Your Image" />
+        <button type="submit">Generate Caption</button>
+      </form>
+
+      <div id="loader" class="loader"></div>
+      <div id="caption"></div>
+
+      <footer>&copy; 2024 Your Company. All rights reserved.</footer>
     </div>
-</body>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        // Trigger file upload when label is clicked
+        $('.file-label').on('click', function () {
+          $('#file-upload').trigger('click');
+          return false; // Prevent default behavior
+        });
+
+        // Preview the selected image
+        $('#file-upload').one('change', function () {
+          var file = this.files[0];
+
+          // Ensure a file is selected
+          if (file) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+              $('#image-preview').attr('src', e.target.result).fadeIn();
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+
+        // Submit form using AJAX
+        $('#caption-form').on('submit', function (event) {
+          event.preventDefault();
+          $('#caption').hide(); // Hide caption before starting
+          $('#loader').show();  // Show loader animation
+
+          var formData = new FormData(this);
+
+          // Check if a file is selected before submitting
+          if ($('#file-upload').get(0).files.length === 0) {
+            alert('Please select an image first.');
+            $('#loader').hide();
+            return;
+          }
+
+          $.ajax({
+            type: 'POST',
+            url: '/generate_caption',
+            data: formData,
+            contentType: false,
+            cache: false,
+            processData: false,
+            success: function (data) {
+              $('#loader').hide(); // Hide loader once we get a response
+              $('#caption').text(data.caption).fadeIn(); // Show the caption
+            },
+            error: function () {
+              $('#loader').hide(); // Hide loader on error
+              alert('An error occurred. Please try again.');
+            },
+          });
+        });
+      });
+    </script>
+  </body>
 </html>
