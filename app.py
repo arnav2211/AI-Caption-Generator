@@ -59,7 +59,7 @@ def generate_caption():
 
 def enhance_caption(description, model):
     inputs = gpt2_tokenizer.encode(description, return_tensors='pt').to(device)
-    outputs = model.generate(inputs, max_length=100, num_beams=5, no_repeat_ngram_size=2, temperature=0.7)
+    outputs = model.generate(inputs, max_length=50, num_beams=5, no_repeat_ngram_size=2, temperature=0.7)
     enhanced_caption = gpt2_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     # Normalize and clean words (strip punctuation, handle case)
