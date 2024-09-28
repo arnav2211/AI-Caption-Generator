@@ -3,6 +3,8 @@ import torch
 from transformers import VisionEncoderDecoderModel, ViTFeatureExtractor, AutoTokenizer, GPT2LMHeadModel, GPT2Tokenizer
 from PIL import Image
 import os
+import re
+import json
 
 app = Flask(__name__)
 
@@ -11,25 +13,24 @@ vision_model = VisionEncoderDecoderModel.from_pretrained("nlpconnect/vit-gpt2-im
 feature_extractor = ViTFeatureExtractor.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
 vision_tokenizer = AutoTokenizer.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
 
-# Load GPT-2 for enhancing the captions
-gpt2_model = GPT2LMHeadModel.from_pretrained('gpt2')
+# Load different GPT models for enhancement
+gpt2_models = {
+    "gpt2": GPT2LMHeadModel.from_pretrained('gpt2'),
+    "gpt2-medium": GPT2LMHeadModel.from_pretrained('gpt2-medium'),
+    "gpt2-large": GPT2LMHeadModel.from_pretrained('gpt2-large')
+}
 gpt2_tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 
 # Move models to GPU if available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 vision_model.to(device)
-gpt2_model.to(device)
+for model in gpt2_models.values():
+    model.to(device)
 
-# Define a dictionary to map keywords to relevant emojis
-emoji_map = {
-    "sun": "🌞", "sunset": "🌅", "sunrise": "🌄",
-    "mountains": "🏔️", "beach": "🏖️", "ocean": "🌊",
-    "sky": "☁️", "forest": "🌲", "flower": "🌸", 
-    "night": "🌙", "star": "⭐", "fire": "🔥", 
-    "love": "❤️", "happy": "😊", "rain": "🌧️",
-    "snow": "❄️", "city": "🏙️", "river": "🌊",
-    "mountain": "🏔️"
-}
+# Define emoji map for keywords
+with open('emoji_map.json', 'r') as f:
+    emoji_map = json.load(f)
+
 
 @app.route('/', methods=['GET'])
 def index():
@@ -45,34 +46,46 @@ def generate_caption():
     pixel_values = feature_extractor(images=image, return_tensors="pt").pixel_values
     pixel_values = pixel_values.to(device)
 
-    # Generate caption (Greedy Decoding)
+    # Generate base caption using vision model
     output_ids = vision_model.generate(pixel_values, max_length=16, num_beams=4, repetition_penalty=2.0)
-    caption = vision_tokenizer.decode(output_ids[0], skip_special_tokens=True)
+    base_caption = vision_tokenizer.decode(output_ids[0], skip_special_tokens=True)
 
-    # Enhance the basic description into a social media-friendly caption
-    enhanced_caption = enhance_caption(caption)
+    # Enhance caption using GPT-2, GPT-2-medium, and GPT-2-large
+    captions = {}
+    for model_name, gpt_model in gpt2_models.items():
+        captions[model_name] = enhance_caption(base_caption, gpt_model)
 
-    return jsonify({'caption': enhanced_caption})
+    return jsonify(captions)
 
-def enhance_caption(description):
-    # Input to GPT-2 model, only use the base caption
+def enhance_caption(description, model):
     inputs = gpt2_tokenizer.encode(description, return_tensors='pt').to(device)
-
-    # Generate enhanced caption
-    outputs = gpt2_model.generate(inputs, max_length=50, num_beams=5, num_return_sequences=1, no_repeat_ngram_size=2, temperature=0.7)
-
-    # Decode the output to get the enhanced caption
+    outputs = model.generate(inputs, max_length=100, num_beams=5, no_repeat_ngram_size=2, temperature=0.7)
     enhanced_caption = gpt2_tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-    # Add context-aware emojis based on keywords
-    relevant_emojis = " ".join([emoji_map[word.lower()] for word in description.split() if word.lower() in emoji_map])
+    # Normalize and clean words (strip punctuation, handle case)
+    words = re.findall(r'\b\w+\b', description.lower())  # Extract words and convert to lowercase
 
-    # Add some relevant hashtags
-    hashtags = " ".join([f"#{word.lower()}" for word in description.split() if len(word) > 3])
+    # Function to find emoji in the nested map
+    def find_emoji(word, emoji_map):
+        for category, emoji_dict in emoji_map.items():
+            if word in emoji_dict:
+                return emoji_dict[word]
+        return None
 
-    # Combine enhanced caption with emojis and hashtags
-    final_caption = f"{enhanced_caption.strip()} {relevant_emojis} {hashtags}"
+    # Add relevant emojis based on the cleaned words
+    caption_words = enhanced_caption.split()
+    emojis = []
+    for word in words:
+        emoji = find_emoji(word, emoji_map)
+        if emoji:
+            emojis.append(emoji)
+
+    # Add hashtags based on the cleaned words
+    hashtags = " ".join([f"#{word}" for word in words if len(word) > 3])
+
+    final_caption = " ".join(caption_words) + " " + " ".join(emojis) + " " + hashtags
     return final_caption
+
 
 if __name__ == '__main__':
     app.run(debug=True)
