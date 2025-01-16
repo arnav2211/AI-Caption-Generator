@@ -1,19 +1,216 @@
-<head>
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Image Captioning</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;700&display=swap" rel="stylesheet" />
+    <style>
+      body {
+        font-family: 'Lora', serif;
+        background: linear-gradient(135deg, #1c92d2, #f2fcfe);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 0;
+        flex-direction: column;
+        overflow-x: hidden;
+      }
 
-<body>
-    <div class="App">
-        <header class="App-header">
-            <img src="{{ url_for('static', filename='Octocat.png') }}" class="App-logo" alt="logo" />
-            <p>
-                GitHub Codespaces <span class="heart">♥️</span> Flask
-            </p>
-            <p class="small">
-                Edit <code>templates/index.html</code> and refresh to see your changes!
-            </p>
-        </header>
+      .main-heading {
+        color: #ffffff;
+        font-size: 3rem;
+        margin-bottom: 20px;
+        text-shadow: 3px 3px 10px rgba(0, 0, 0, 0.4);
+      }
+
+      .container {
+        width: 100%;
+        max-width: 550px;
+        text-align: center;
+        background-color: #ffffff;
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0px 15px 30px rgba(0, 0, 0, 0.2);
+      }
+
+      .file-label {
+        background-color: #1c92d2;
+        color: white;
+        padding: 15px 30px;
+        font-size: 1.2rem;
+        border-radius: 50px;
+        cursor: pointer;
+        display: inline-block;
+        margin-bottom: 20px;
+      }
+
+      img {
+        width: 100%;
+        height: auto;
+        margin-top: 20px;
+        display: none;
+        border-radius: 15px;
+      }
+
+      .captions {
+        margin-top: 30px;
+        font-size: 1.2rem;
+        color: #333;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 15px;
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
+        display: none;
+      }
+
+      .caption-container {
+        position: relative;
+        margin-bottom: 20px;
+        text-align: left;
+        padding: 20px;
+        background-color: #eef2f3;
+        border-radius: 8px;
+      }
+
+      .caption-heading {
+        font-weight: bold;
+        color: #444;
+      }
+
+      .caption-text {
+        margin: 10px 0;
+      }
+
+      .copy-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #1c92d2;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        font-size: 1rem;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      .copy-btn:hover {
+        background-color: #1472a1;
+      }
+
+      .loader {
+        border: 8px solid #f9f9f9;
+        border-radius: 50%;
+        border-top: 8px solid #3498db;
+        width: 60px;
+        height: 60px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+        display: none;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      footer {
+        margin-top: 20px;
+        color: #555;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1 class="main-heading">AI Image Captioning</h1>
+
+    <div class="container">
+      <form id="caption-form" action="/generate_caption" method="post" enctype="multipart/form-data">
+        <label for="file-upload" class="file-label">Upload an Image</label>
+        <input type="file" name="image" id="file-upload" accept="image/*" style="display:none;" />
+        <img id="image-preview" src="#" alt="Your Image" />
+      </form>
+
+      <div id="loader" class="loader"></div>
+      <div id="captions" class="captions"></div>
+
+      <footer>&copy; 2024 Your Company. All rights reserved.</footer>
     </div>
-</body>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        // Trigger file upload when label is clicked
+        $('.file-label').on('click', function () {
+          $('#file-upload').trigger('click');
+          return false;
+        });
+
+        // Preview and auto-submit the image once uploaded
+        $('#file-upload').on('change', function () {
+          var file = this.files[0];
+
+          if (file) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+              $('#image-preview').attr('src', e.target.result).fadeIn();
+            };
+            reader.readAsDataURL(file);
+
+            $('#loader').show();
+            var formData = new FormData($('#caption-form')[0]);
+
+            $.ajax({
+              type: 'POST',
+              url: '/generate_caption',
+              data: formData,
+              contentType: false,
+              cache: false,
+              processData: false,
+              success: function (data) {
+                $('#loader').hide();
+                $('#captions').html(`
+                  <div class="caption-container">
+                    <h4 class="caption-heading">Caption 1 (GPT-2):</h4>
+                    <p class="caption-text" id="caption1">${data['gpt2']}</p>
+                    <button class="copy-btn" onclick="copyToClipboard('caption1')">Copy</button>
+                  </div>
+                  <div class="caption-container">
+                    <h4 class="caption-heading">Caption 2 (GPT-2 Medium):</h4>
+                    <p class="caption-text" id="caption2">${data['gpt2-medium']}</p>
+                    <button class="copy-btn" onclick="copyToClipboard('caption2')">Copy</button>
+                  </div>
+                  <div class="caption-container">
+                    <h4 class="caption-heading">Caption 3 (GPT-2 Large):</h4>
+                    <p class="caption-text" id="caption3">${data['gpt2-large']}</p>
+                    <button class="copy-btn" onclick="copyToClipboard('caption3')">Copy</button>
+                  </div>
+                `).fadeIn();
+              },
+              error: function () {
+                $('#loader').hide();
+                alert('An error occurred. Please try again.');
+              },
+            });
+          }
+        });
+      });
+
+      // Function to copy text to clipboard
+      function copyToClipboard(elementId) {
+        var textToCopy = document.getElementById(elementId).innerText;
+        var tempInput = document.createElement("input");
+        document.body.appendChild(tempInput);
+        tempInput.setAttribute("value", textToCopy);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+        alert("Copied to clipboard!");
+      }
+    </script>
+  </body>
 </html>

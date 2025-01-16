@@ -1,0 +1,13 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+#image-form {
+    margin-bottom: 20px;
+}
+
+#caption {
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 20px;
+}
