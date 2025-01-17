@@ -1,13 +1,355 @@
-body {
-    font-family: Arial, sans-serif;
-}
+<!DOCTYPE html>
+<html lang="en">
 
-#image-form {
-    margin-bottom: 20px;
-}
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instagram Image Post</title>
 
-#caption {
-    font-size: 18px;
-    font-weight: bold;
-    margin-top: 20px;
-}
+  <!-- Importing Poppins font from Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+
+  <!-- Custom Font Instagram Sans -->
+  <style>
+    @font-face {
+      font-family: 'InstagramSans';
+      src: url('fonts/InstagramSans-Regular.woff2') format('woff2'),
+        url('fonts/InstagramSans-Regular.woff') format('woff'); /* Fallback */
+    }
+
+    /* Styling the Instagram heading */
+    #insta-heading {
+      font-family: 'InstagramSans', sans-serif;
+      font-size: 48px;
+      color: #ffffff;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* Body and container styling */
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #121212;
+      color: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 550px;
+      text-align: center;
+      background-color: #1c1c1c;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0px 15px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .file-label {
+      background: linear-gradient(45deg, #fd1d1d, #fcb045);
+      color: white;
+      padding: 15px 30px;
+      font-size: 1.2rem;
+      border-radius: 50px;
+      cursor: pointer;
+      display: inline-block;
+      margin-bottom: 20px;
+      transition: background 0.4s ease, transform 0.3s ease;
+      box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .file-label:hover {
+      background: linear-gradient(45deg, #833ab4, #fd1d1d);
+      transform: scale(1.05);
+      box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .file-label:active {
+      transform: scale(0.98);
+      box-shadow: none;
+    }
+
+    img {
+      width: 100%;
+      height: auto;
+      margin-top: 20px;
+      display: none;
+      border-radius: 15px;
+    }
+
+    .input-caption {
+      width: 100%;
+      padding: 2px;
+      font-size: 1rem;
+      color: #fff;
+      background-color: #333;
+      border: 1px solid #555;
+      border-radius: 10px;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    .captions {
+      margin-top: 30px;
+      font-size: 1.2rem;
+      color: #fff;
+      padding: 20px;
+      background-color: #2a2a2a;
+      border-radius: 15px;
+      box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
+      display: none;
+    }
+
+    .caption-container {
+      position: relative;
+      margin-bottom: 20px;
+      text-align: left;
+      padding: 20px;
+      background-color: #1f1f1f;
+      border-radius: 8px;
+    }
+
+    .caption-heading {
+      font-weight: bold;
+      color: #ffffff;
+    }
+
+    .caption-text {
+      margin: 10px 0;
+    }
+
+    /* Button with gradient effect */
+    .generate-btn {
+      text-decoration: none;
+      position: relative;
+      border: none;
+      font-size: 13px;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+      color: #fff;
+      width: 9em;
+      height: 3em;
+      line-height: 2em;
+      text-align: center;
+      background: linear-gradient(90deg, #03a9f4, #f441a5, #ffeb3b, #03a9f4);
+      background-size: 300%;
+      border-radius: 30px;
+      z-index: 1;
+      margin-top: 20px;
+      width: 50%;
+    }
+
+    .generate-btn:hover {
+      animation: ani 5s linear infinite;
+      border: none;
+    }
+
+    @keyframes ani {
+      0% {
+        background-position: 0%;
+      }
+
+      100% {
+        background-position: 400%;
+      }
+    }
+
+    .generate-btn:before {
+      content: "";
+      position: absolute;
+      top: -5px;
+      left: -5px;
+      right: -5px;
+      bottom: -5px;
+      z-index: -1;
+      background: linear-gradient(90deg, #03a9f4, #f441a5, #ffeb3b, #03a9f4);
+      background-size: 400%;
+      border-radius: 35px;
+      transition: 1s;
+    }
+
+    .generate-btn:hover::before {
+      filter: blur(20px);
+    }
+
+    .generate-btn:active {
+      background: linear-gradient(32deg, #03a9f4, #f441a5, #ffeb3b, #03a9f4);
+    }
+
+    .loader {
+      width: 64px;
+      height: 64px;
+      position: relative;
+      background: #FFF;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 20px auto;
+      display: none; /* Initially hidden */
+    }
+
+    .loader:before {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 40px;
+      height: 40px;
+      transform: rotate(45deg) translate(30%, 40%);
+      background: #ff9371;
+      box-shadow: 32px -34px 0 5px #ff3d00;
+      animation: slide 2s infinite ease-in-out alternate;
+    }
+
+    .loader:after {
+      content: "";
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ff3d00;
+      transform: rotate(0deg);
+      transform-origin: 35px 145px;
+      animation: rotate 2s infinite ease-in-out;
+    }
+
+    @keyframes slide {
+      0%,
+      100% {
+        bottom: -35px
+      }
+
+      25%,
+      75% {
+        bottom: -2px
+      }
+
+      20%,
+      80% {
+        bottom: 2px
+      }
+    }
+
+    @keyframes rotate {
+      0% {
+        transform: rotate(-15deg)
+      }
+
+      25%,
+      75% {
+        transform: rotate(0deg)
+      }
+
+      100% {
+        transform: rotate(25deg)
+      }
+    }
+
+    footer {
+      margin-top: 20px;
+      color: #555;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1 id="insta-heading">Instagram</h1>
+
+    <form id="caption-form" action="/generate_caption" method="post" enctype="multipart/form-data">
+      <label for="file-upload" class="file-label">Upload an Image</label>
+      <input type="file" name="image" id="file-upload" accept="image/*" style="display:none;" />
+      <img id="image-preview" src="#" alt="Your Image" />
+
+      <textarea class="input-caption" id="user-caption" rows="3" placeholder="Write your own caption..."></textarea>
+
+      <button type="button" class="generate-btn" id="generate-ai-btn">Generate with AI</button>
+    </form>
+
+    <div id="loader" class="loader"></div>
+    <div id="captions" class="captions"></div>
+
+    <footer>&copy; 2024 Your Company. All rights reserved.</footer>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    $(document).ready(function () {
+      // Trigger file upload when label is clicked
+      $('.file-label').on('click', function () {
+        $('#file-upload').trigger('click');
+        return false;
+      });
+
+      // Preview image when uploaded
+      $('#file-upload').on('change', function () {
+        var file = this.files[0];
+
+        if (file) {
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            $('#image-preview').attr('src', e.target.result).fadeIn();
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      // Handle the click for AI generation
+      $('#generate-ai-btn').on('click', function () {
+        var formData = new FormData($('#caption-form')[0]);
+        var userCaption = $('#user-caption').val();
+
+        if (!formData.get('image')) {
+          alert('Please upload an image.');
+          return;
+        }
+
+        $('#loader').show();
+        $('#captions').hide();
+
+        $.ajax({
+          type: 'POST',
+          url: '/generate_caption', // Adjust to your endpoint
+          data: formData,
+          contentType: false,
+          cache: false,
+          processData: false,
+          success: function (data) {
+            $('#loader').hide();
+            $('#captions').html(`
+              <div class="caption-container">
+                <h4 class="caption-heading">Your Caption:</h4>
+                <p class="caption-text">${userCaption}</p>
+              </div>
+              <div class="caption-container">
+                <h4 class="caption-heading">AI Generated Caption 1:</h4>
+                <p class="caption-text">${data['gpt2']}</p>
+              </div>
+              <div class="caption-container">
+                <h4 class="caption-heading">AI Generated Caption 2:</h4>
+                <p class="caption-text">${data['gpt2-medium']}</p>
+              </div>
+              <div class="caption-container">
+                <h4 class="caption-heading">AI Generated Caption 3:</h4>
+                <p class="caption-text">${data['gpt2-large']}</p>
+              </div>
+            `).fadeIn();
+          },
+          error: function () {
+            $('#loader').hide();
+            alert('An error occurred. Please try again.');
+          },
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>
